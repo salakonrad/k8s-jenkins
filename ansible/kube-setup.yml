@@ -1,0 +1,108 @@
+---
+- hosts: all
+  become: true
+  gather_facts: True
+  tasks:
+    - name: Add kubernetes repo
+      yum_repository:
+        name: kubernetes
+        description: k8s Repo
+        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+        state: present
+
+    - name: Install packages
+      yum:
+        name:
+          - docker
+          - kubeadm
+        state: present
+
+    - name: Load necesarry modules
+      shell: modprobe br_netfilter
+
+    #  - name: Hosts file
+    #    blockinfile:
+    #      path: /etc/hosts
+    #      block: |
+    #        "{{ hostvars[item]['ansible_eth1']['ipv4']['address'] }} {{ hostvars[item]['ansible_hostname'] }}"
+    #    with_items:
+    #      - node1
+    #      - node2
+    #      - node3
+
+    - name: hosts file
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          {{ node1ip }} {{ node1name }}
+          {{ node2ip }} {{ node2name }}
+          {{ node3ip }} {{ node3name }}
+
+    - name: Disable swap for k8s
+      mount:
+        name: swap
+        state: absent
+
+    - name: Disable swap
+      replace:
+        path: /etc/fstab
+        regexp: '^/swapfile'
+        replace: '#/swapfile'
+
+    - name: Turn off swap
+      shell: swapoff -a
+
+    - name: Routing traffic fix
+      blockinfile:
+        path: /etc/sysctl.conf
+        block: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+
+    - name: Load sysctl changes
+      shell: sysctl -p
+
+    - name: Disable selinux for k8s to access filesystem
+      shell: "setenforce 0 && sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config"
+
+    - name: Start and enable services
+      systemd:
+        name: "{{item}}"
+        state: started
+        enabled: yes
+      with_items:
+        - kubelet
+
+    - name: Part to setup on master node
+      block:
+        - name: Init k8s cluster
+          shell: kubeadm init --apiserver-advertise-address="192.168.56.10" --apiserver-cert-extra-sans="192.168.56.10"  --node-name node1 --pod-network-cidr=192.168.0.0/16
+
+        - name: Commands for start using k8s
+          shell: "{{item}}"
+          with_items:
+            - mkdir -p $HOME/.kube
+            - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+            - chown $(id -u):$(id -g) $HOME/.kube/config
+
+        - name: Generation of k8s join command
+          shell: kubeadm token create --print-join-command 2> /dev/null
+          register: kube_join_command
+
+        - name: copy kube_join_command var to file
+          copy:
+            content: "{{ kube_join_command.stdout_lines[0] }}"
+            dest: "/tmp/kube_join_command_file.sh"
+          delegate_to: localhost
+      when: mode == "master"
+
+    - name: Copy file to workers
+      copy:
+        src: "/tmp/kube_join_command_file.sh"
+        dest: "/tmp/kube_join_command_file.sh"
+      when: mode == "worker"
+
+    - name: Run join command
+      command: sh /tmp/kube_join_command_file.sh
+      when: mode == "worker"
