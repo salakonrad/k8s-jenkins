@@ -4,8 +4,8 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "node1" do |node1|
     node1.vm.box = "centos/stream8"
-    node1.vm.hostname = "node1"
     node1.vm.box_url = "centos/stream8"
+    node1.vm.hostname = "node1"
 
     node1.vm.provision "ansible" do |ansible|
       ansible.playbook = "ansible/kube-setup.yml"
@@ -30,11 +30,11 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "node2" do |node2|
     node2.vm.box = "centos/stream8"
-    node2.vm.hostname = "node2"
     node2.vm.box_url = "centos/stream8"
+    node2.vm.hostname = "node2"
 
     node2.vm.provision "ansible" do |ansible|
-      ansible.playbook = "kube-setup.yml"
+      ansible.playbook = "ansible/kube-setup.yml"
       ansible.extra_vars = {
         node1ip: "192.168.56.10",
         node2ip: "192.168.56.11",
@@ -57,11 +57,11 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "node3" do |node3|
     node3.vm.box = "centos/stream8"
-    node3.vm.hostname = "node3"
     node3.vm.box_url = "centos/stream8"
+    node3.vm.hostname = "node3"
 
     node3.vm.provision "ansible" do |ansible|
-      ansible.playbook = "kube-setup.yml"
+      ansible.playbook = "ansible/kube-setup.yml"
       ansible.extra_vars = {
         node1ip: "192.168.56.10",
         node2ip: "192.168.56.11",

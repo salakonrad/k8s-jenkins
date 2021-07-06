@@ -11,10 +11,20 @@
         gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
         state: present
 
+    - name: Installing Docker
+      shell: |
+        yum install -y yum-utils device-mapper-persistent-data lvm2
+        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        yum install -y docker-ce docker-ce-cli containerd.io
+
+    - name: Add vagrant user to docker group
+      user:
+        name: vagrant
+        group: docker
+
     - name: Install packages
       yum:
         name:
-          - docker
           - kubeadm
         state: present
 
@@ -73,36 +83,36 @@
         enabled: yes
       with_items:
         - kubelet
+        - docker
 
     - name: Part to setup on master node
       block:
         - name: Init k8s cluster
           shell: kubeadm init --apiserver-advertise-address="192.168.56.10" --apiserver-cert-extra-sans="192.168.56.10"  --node-name node1 --pod-network-cidr=192.168.0.0/16
 
-        - name: Commands for start using k8s
-          shell: "{{item}}"
+        - name: Setup kubeconfig for vagrant user
+          command: "{{ item }}"
           with_items:
-            - mkdir -p $HOME/.kube
-            - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-            - chown $(id -u):$(id -g) $HOME/.kube/config
+            - mkdir -p /home/vagrant/.kube
+            - cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+            - chown vagrant:vagrant /home/vagrant/.kube/config
 
-        - name: Generation of k8s join command
-          shell: kubeadm token create --print-join-command 2> /dev/null
-          register: kube_join_command
+        - name: Install calico pod network
+          become: false
+          command: kubectl create -f https://docs.projectcalico.org/v3.4/getting-started/kubernetes/installation/hosted/calico.yaml
 
-        - name: copy kube_join_command var to file
-          copy:
-            content: "{{ kube_join_command.stdout_lines[0] }}"
-            dest: "/tmp/kube_join_command_file.sh"
-          delegate_to: localhost
+        - name: Generate join command
+          command: kubeadm token create --print-join-command
+          register: join_command
+
+        - name: Copy join command to local file
+          local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
       when: mode == "master"
 
-    - name: Copy file to workers
-      copy:
-        src: "/tmp/kube_join_command_file.sh"
-        dest: "/tmp/kube_join_command_file.sh"
+    - name: Copy the join command to server location
+      copy: src=join-command dest=/tmp/join-command.sh mode=0777
       when: mode == "worker"
 
-    - name: Run join command
-      command: sh /tmp/kube_join_command_file.sh
+    - name: Join the node to cluster
+      command: sh /tmp/join-command.sh
       when: mode == "worker"
