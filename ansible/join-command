@@ -1,1 +1,0 @@
-kubeadm join 192.168.56.10:6443 --token cbyl4j.fzb22n3l314cxpe8 --discovery-token-ca-cert-hash sha256:5c30cc064f10fb77addc52f994cb0b9dd85bd2feeec3f065c2a68cb84c00caa2 
