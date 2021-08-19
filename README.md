@@ -14,8 +14,9 @@
 
 ## Apply k8s configurations
 ```
-kubectl apply -f jenkins-deployment.yml
-kubectl apply -f jenkins-service.yml
+kubectl create namespace jenkins
+kubectl --namespace jenkins apply -f jenkins-deployment.yml
+kubectl --namespace jenkins apply -f jenkins-service.yml
 ```
 
 [comment]: <> (## Ansible k8s setup)
