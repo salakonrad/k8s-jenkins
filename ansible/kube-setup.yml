@@ -76,14 +76,42 @@
     - name: Disable selinux for k8s to access filesystem
       shell: "setenforce 0 && sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config"
 
+    - name: Create direcotry Docker
+      file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+        recurse: yes
+
+    - name: Create docker daemon json cofnig
+      file:
+        path: /etc/docker/daemon.json
+        state: touch
+        mode: '0644'
+
+    - name: Change cgroupdriver in docker config
+      blockinfile:
+        path: /etc/docker/daemon.json
+        marker: ""
+        block: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m"
+            },
+            "storage-driver": "overlay2"
+          }
+
     - name: Start and enable services
       systemd:
         name: "{{item}}"
         state: started
+        daemon_reload: yes
         enabled: yes
       with_items:
-        - kubelet
         - docker
+        - kubelet
 
     - name: Part to setup on master node
       block:
