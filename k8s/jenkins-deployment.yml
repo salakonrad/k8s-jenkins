@@ -14,7 +14,7 @@ spec:
         app: master
     spec:
       containers:
-        - image: jenkins-test:latest
+        - image: salins/jenkins:0.0.1
           imagePullPolicy: IfNotPresent
           name: jenkins
           ports:
