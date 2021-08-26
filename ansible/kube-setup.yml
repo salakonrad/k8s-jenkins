@@ -11,10 +11,14 @@
         gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
         state: present
 
+    - name: Add docker repository
+      get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docer-ce.repo
+
     - name: Installing Docker
       shell: |
         yum install -y yum-utils device-mapper-persistent-data lvm2
-        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
         yum install -y docker-ce docker-ce-cli containerd.io
 
     - name: Add vagrant user to docker group
@@ -80,28 +84,12 @@
       file:
         path: /etc/docker
         state: directory
-        mode: '0755'
         recurse: yes
 
-    - name: Create docker daemon json cofnig
-      file:
-        path: /etc/docker/daemon.json
-        state: touch
-        mode: '0644'
-
-    - name: Change cgroupdriver in docker config
-      blockinfile:
-        path: /etc/docker/daemon.json
-        marker: ""
-        block: |
-          {
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "log-driver": "json-file",
-            "log-opts": {
-              "max-size": "100m"
-            },
-            "storage-driver": "overlay2"
-          }
+    - name: Set cgroup driver as systemd
+      template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
 
     - name: Start and enable services
       systemd:
