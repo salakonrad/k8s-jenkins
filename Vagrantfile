@@ -3,8 +3,8 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", path: "setup.sh"
 
   config.vm.define "node1" do |node1|
-    node1.vm.box = "centos/stream8"
-    node1.vm.box_url = "centos/stream8"
+    node1.vm.box = "centos/8"
+    node1.vm.box_url = "centos/8"
     node1.vm.hostname = "node1"
 
     node1.vm.provision "ansible" do |ansible|
@@ -29,8 +29,8 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "node2" do |node2|
-    node2.vm.box = "centos/stream8"
-    node2.vm.box_url = "centos/stream8"
+    node2.vm.box = "centos/8"
+    node2.vm.box_url = "centos/8"
     node2.vm.hostname = "node2"
 
     node2.vm.provision "ansible" do |ansible|
@@ -56,8 +56,8 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "node3" do |node3|
-    node3.vm.box = "centos/stream8"
-    node3.vm.box_url = "centos/stream8"
+    node3.vm.box = "centos/8"
+    node3.vm.box_url = "centos/8"
     node3.vm.hostname = "node3"
 
     node3.vm.provision "ansible" do |ansible|
